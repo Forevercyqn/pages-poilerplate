@@ -1,14 +1,9 @@
 // 实现这个项目的构建任务
 const { series, src, dest, parallel } = require("gulp");
 const del = require("del");
-const sass = require("gulp-sass")(require("sass"));
-const babel = require("gulp-babel");
-const swig = require("gulp-swig");
-const useref = require("gulp-useref");
-const GulpCleanCss = require("gulp-clean-css");
-const gulpIf = require("gulp-if");
-const GulpUglify = require("gulp-uglify");
-const htmlmin = require("gulp-htmlmin");
+const gulpLoadPlugins = require("gulp-load-plugins");
+const plugins = gulpLoadPlugins();
+const sass = plugins.sass(require("sass"));
 
 //定义模板解析规则
 const data = {
@@ -66,17 +61,17 @@ const styles = () => {
 const pages = () => {
     return src("src/**/*.html", { base: "src" })
         .pipe(
-            swig({
+            plugins.swig({
                 data,
             })
         )
-        .pipe(useref({ searchPath: ["dist", "."] }))
-        .pipe(gulpIf("*.js", GulpUglify())) //压缩js文件
-        .pipe(gulpIf("*.css", GulpCleanCss())) //压缩css文件
+        .pipe(plugins.useref({ searchPath: ["dist", "."] }))
+        .pipe(plugins.if("*.js", plugins.uglify())) //压缩js文件
+        .pipe(plugins.if("*.css", plugins.cleanCss())) //压缩css文件
         .pipe(
-            gulpIf(
+            plugins.if(
                 "*.html",
-                htmlmin({
+                plugins.htmlmin({
                     collapseWhitespace: true, //折叠空白符
                     minifyCSS: true, //压缩style标签中的css
                     minifyJS: true, //压缩script标签中的js
@@ -90,7 +85,7 @@ const pages = () => {
 const scripts = () => {
     return src("src/assets/scripts/*.js", { base: "src" })
         .pipe(
-            babel({
+            plugins.babel({
                 presets: ["@babel/env"],
             })
         )
@@ -98,6 +93,20 @@ const scripts = () => {
 };
 
 /********************************************非必要更新任务**************************************/
+
+/**images任务 */
+const images = () => {
+    return src("src/assets/images/**", { base: "src" })
+        .pipe(plugins.imagemin())
+        .pipe(dest("dist"));
+};
+
+/**fonts任务 */
+const fonts = () => {
+    return src("src/assets/fonts/**", { base: "src" })
+        .pipe(plugins.imagemin())
+        .pipe(dest("dist"));
+};
 
 /**文件清除任务 删除构建完成的文件 */
 const clean = () => {
