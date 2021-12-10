@@ -4,6 +4,7 @@ const del = require("del");
 const gulpLoadPlugins = require("gulp-load-plugins");
 const plugins = gulpLoadPlugins();
 const sass = plugins.sass(require("sass"));
+const bs = require('browser-sync')
 
 //定义模板解析规则
 const data = {
@@ -54,7 +55,8 @@ const data = {
 const styles = () => {
     return src("src/assets/styles/*.scss", { base: "src" })
         .pipe(sass({ outputStyle: "expanded" }).on("error", sass.logError))
-        .pipe(dest("dist"));
+        .pipe(dest("dist"))
+        .pipe(bs.reload({stream:true}));
 };
 
 /**html页面任务 */
@@ -89,7 +91,8 @@ const scripts = () => {
                 presets: ["@babel/env"],
             })
         )
-        .pipe(dest("dist"));
+        .pipe(dest("dist"))
+        .pipe(bs.reload({stream: true}));
 };
 
 /********************************************非必要更新任务**************************************/
@@ -108,16 +111,46 @@ const fonts = () => {
         .pipe(dest("dist"));
 };
 
+/**其他任务 public中的文件原原样 */
+const extra = ()=> {
+    return src("public/**", {base:'public'})
+    .dest('dist');
+}
+
 /**文件清除任务 删除构建完成的文件 */
 const clean = () => {
     return del("dist");
 };
 
+/**********************************************开发服务器****************************/
+
+const server = ()=> {
+    bs.init({
+      notify:false, //是否每次更新内容都弹出提示
+      port:8089, // 指定端口号
+      open: true, // 运行服务是否自动打开浏览器
+      files:'dist/**', //监听路径 当前路径下的文件发生变化时，会触发更新
+      server: {
+        baseDir: ['dist', 'src', 'public'],
+        routes: {
+          '/node_modules': 'node_modules', // 文件映射
+        }
+      }
+    })
+}
+
 /*********************************************组合任务****************************************/
 
 //组合任务 编译任务
-const compile = series(clean, parallel(styles, scripts, pages));
+const compile = parallel(styles, scripts, pages, images, fonts);
 
+//组合任务  开发任务
+const dev = series(clean, compile, server);
+
+// 组合任务 build任务
+const build = series(clean, parallel(compile, extra))
 module.exports = {
     compile,
+    build,
+    dev
 };
